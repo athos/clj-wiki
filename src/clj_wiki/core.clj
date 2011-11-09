@@ -1,7 +1,7 @@
 (ns clj-wiki.core
-  (:use compojure.core
-        hiccup.core)
-  (:require [appengine-magic.core :as ae]))
+  (:use [compojure.core :only [defroutes GET POST ANY]]
+        hiccup.core
+        [ring.adapter.jetty :as ring]))
 
 (defn page->html [title content & {:keys [show-edit? show-all?]}]
   (html [:html
@@ -9,9 +9,9 @@
           [:body
            [:h1 title]
            [:div {:align "right"}
-            [:a {:href "/"} "[トップ]"]
-            [:a {:href (str "/" title "/edit")} "[編集]"]
-            [:a {:href (str "/all")} "[一覧]"]]
+            [:a {:href "/"} "[Top]"]
+            [:a {:href (str "/" title "/edit")} "[Edit]"]
+            [:a {:href (str "/all")} "[All]"]]
            [:hr]
            content]]]))
 
@@ -26,7 +26,7 @@
     [:input {:type "submit" :name "submit" :value "Submit"}]
     [:input {:type "reset" :name "reset" :value "Reset"}]]))
 
-(defroutes clj-wiki-app-handler
+(defroutes routes
   (GET "/" req
        {:status 200
         :headers {"Content-Type" "text/plain"}
@@ -52,4 +52,6 @@
         :headers {"Content-Type" "text/plain"}
         :body "not found"}))
 
-(ae/def-appengine-app clj-wiki-app #'clj-wiki-app-handler)
+(defn -main []
+  (let [port (Integer/parseInt (get (System/getenv) "PORT" "8080"))]
+    (run-jetty routes {:port port})))
