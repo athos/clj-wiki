@@ -1,7 +1,8 @@
 (ns clj-wiki.core
   (:use [compojure.core :only [defroutes GET POST ANY]]
-        hiccup.core
-        [ring.adapter.jetty :as ring]))
+        [hiccup.core :only [html]]
+        [ring.adapter.jetty :only [run-jetty]]
+        [somnium.congomongo :only [make-connection with-mongo authenticate]]))
 
 (defn page->html [title content & {:keys [show-edit? show-all?]}]
   (html [:html
@@ -52,6 +53,23 @@
         :headers {"Content-Type" "text/plain"}
         :body "not found"}))
 
+(defn db-info [url]
+  (if-let [[_ user pass host port dbname]
+           (re-matches #"mongodb://(.+?):(.+?)@(.+?):(\d+?)/(.+)" url)]
+    {:user user :pass pass :host host :port (Integer/parseInt port) :db dbname}))
+
+(defn with-db [db-info proc]
+  (let [{:keys [user pass host port db]} db-info
+        conn (make-connection dbname :host host :port port)]
+    (with-mongo conn
+      (when (and user pass)
+        (authenticate conn user pass))
+      (proc))))
+
 (defn -main []
-  (let [port (Integer/parseInt (get (System/getenv) "PORT" "8080"))]
-    (run-jetty routes {:port port})))
+  (let [port (Integer/parseInt (get (System/getenv) "PORT" "8080"))
+        db-url (System/getenv "MONGOHQ_URL")
+        db-info (or (and db-url (db-info db-url))
+                    {:db "mydb", :host "127.0.0.1", :port 27017})]
+    (with-db db-info
+      #(run-jetty routes {:port port}))))
