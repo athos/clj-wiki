@@ -1,5 +1,6 @@
 (ns clj-wiki.core
   (:use [compojure.core :only [defroutes GET POST ANY]]
+        [compojure.handler :only [site]]
         [clj-wiki.handlers :only [view-page list-page edit-page commit-page not-found-page]]
         [ring.adapter.jetty :only [run-jetty]]
         [somnium.congomongo :only [make-connection with-mongo authenticate]]))
@@ -9,14 +10,16 @@
        (view-page "TopPage"))
   (GET "/all" req
        (list-page))
+  (POST "/submit" {params :params}
+        (commit-page (:wikiname params) (:content params)))
   (GET "/:wikiname" [wikiname]
        (view-page wikiname))
   (GET "/:wikiname/edit" [wikiname]
        (edit-page wikiname))
-  (POST "/:wikiname/submit" [wikiname]
-        (commit-page wikiname))
   (ANY "*" _
        (not-found-page)))
+
+(def clj-wiki-app (site routes))
 
 (defn db-info [url]
   (if-let [[_ user pass host port db]
@@ -37,4 +40,4 @@
         db-info (or (and db-url (db-info db-url))
                     {:db "mydb", :host "127.0.0.1", :port 27017})]
     (with-db db-info
-      #(run-jetty routes {:port port}))))
+      #(run-jetty clj-wiki-app {:port port}))))
