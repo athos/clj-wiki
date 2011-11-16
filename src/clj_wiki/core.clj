@@ -4,8 +4,6 @@
         [ring.adapter.jetty :only [run-jetty]]
         [somnium.congomongo :only [make-connection with-mongo authenticate]]))
 
-(def counter (atom 0))
-
 (defn page->html [title content & {:keys [show-edit? show-all?]}]
   (html [:html
          [:head [:title title]
@@ -33,8 +31,7 @@
   (GET "/" req
        {:status 200
         :headers {"Content-Type" "text/plain"}
-        :body (do (swap! counter inc)
-                  (str "Hello, world!" @counter))})
+        :body "Hello, world!"})
   (GET "/all" req
        {:status 200
         :headers {"Content-Type" "text/plain"}
