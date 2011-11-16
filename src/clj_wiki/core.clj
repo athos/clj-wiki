@@ -4,6 +4,8 @@
         [ring.adapter.jetty :only [run-jetty]]
         [somnium.congomongo :only [make-connection with-mongo authenticate]]))
 
+(def counter (atom 0))
+
 (defn page->html [title content & {:keys [show-edit? show-all?]}]
   (html [:html
          [:head [:title title]
@@ -31,7 +33,8 @@
   (GET "/" req
        {:status 200
         :headers {"Content-Type" "text/plain"}
-        :body "Hello, world!"})
+        :body (do (swap! counter inc)
+                  (str "Hello, world!" @counter))})
   (GET "/all" req
        {:status 200
         :headers {"Content-Type" "text/plain"}
@@ -54,13 +57,13 @@
         :body "not found"}))
 
 (defn db-info [url]
-  (if-let [[_ user pass host port dbname]
+  (if-let [[_ user pass host port db]
            (re-matches #"mongodb://(.+?):(.+?)@(.+?):(\d+?)/(.+)" url)]
-    {:user user :pass pass :host host :port (Integer/parseInt port) :db dbname}))
+    {:user user :pass pass :host host :port (Integer/parseInt port) :db db}))
 
 (defn with-db [db-info proc]
   (let [{:keys [user pass host port db]} db-info
-        conn (make-connection dbname :host host :port port)]
+        conn (make-connection db :host host :port port)]
     (with-mongo conn
       (when (and user pass)
         (authenticate conn user pass))
