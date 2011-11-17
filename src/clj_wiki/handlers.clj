@@ -1,7 +1,7 @@
 (ns clj-wiki.handlers
   (:use [hiccup.core :only [html]]
         [ring.util.response :only [redirect-after-post]]
-        [somnium.congomongo :only [insert! fetch-one]]))
+        [somnium.congomongo :only [insert! update! fetch-one]]))
 
 (defn- page->html [title content & {:keys [show-edit? show-all?]}]
   (html [:html
@@ -38,7 +38,7 @@
    :body "not found"})
 
 (defn view-page [wikiname]
-  (if-let [page {:content "hogehoge"} #_(fetch-one :pages :where {:name wikiname})]
+  (if-let [page (fetch-one :pages :where {:name wikiname})]
     (standard-page (render-view-page wikiname (:content page)))
     (not-found-page)))
 
@@ -46,8 +46,11 @@
   (standard-page "page list goes here"))
 
 (defn edit-page [wikiname]
-  (let [page {:content "hogehoge"} #_(fetch-one :pages :where {:name wikiname})]
+  (let [page (fetch-one :pages :where {:name wikiname})]
     (standard-page (render-edit-page wikiname (:content page)))))
 
 (defn commit-page [wikiname content]
+  (if-let [page (fetch-one :pages :where {:name wikiname})]
+    (update! :pages page (merge page {:content content}))
+    (insert! :pages {:name wikiname :content content}))
   (redirect-after-post (str "/" wikiname)))

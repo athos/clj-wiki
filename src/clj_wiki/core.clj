@@ -3,7 +3,8 @@
         [compojure.handler :only [site]]
         [clj-wiki.handlers :only [view-page list-page edit-page commit-page not-found-page]]
         [ring.adapter.jetty :only [run-jetty]]
-        [somnium.congomongo :only [make-connection with-mongo authenticate]]))
+        [somnium.congomongo :only [make-connection set-connection! authenticate connection?]]
+        [somnium.congomongo.config :only [*mongo-config*]]))
 
 (defroutes routes
   (GET "/" req
@@ -19,25 +20,30 @@
   (ANY "*" _
        (not-found-page)))
 
-(def clj-wiki-app (site routes))
+(def *db-info* (atom nil))
+
+(defn wrap-mongo-setup [handler default]
+  (fn [req]
+    (when-not (connection? *mongo-config*)
+      (let [{:keys [user pass host port db]} (or @*db-info* default)
+            conn (make-connection db :host host :port port)]
+        (set-connection! conn)
+        (when (and user pass)
+          (authenticate conn user pass))))
+    (handler req)))
+
+(def clj-wiki-app
+  (-> (site routes)
+      (wrap-mongo-setup {:db "mydb" :host "127.0.0.1" :port 27017})))
 
 (defn db-info [url]
-  (if-let [[_ user pass host port db]
-           (re-matches #"mongodb://(.+?):(.+?)@(.+?):(\d+?)/(.+)" url)]
-    {:user user :pass pass :host host :port (Integer/parseInt port) :db db}))
-
-(defn with-db [db-info proc]
-  (let [{:keys [user pass host port db]} db-info
-        conn (make-connection db :host host :port port)]
-    (with-mongo conn
-      (when (and user pass)
-        (authenticate conn user pass))
-      (proc))))
+  (and url
+       (if-let [[_ user pass host port db]
+                (re-matches #"mongodb://(.+?):(.+?)@(.+?):(\d+?)/(.+)" url)]
+         {:user user :pass pass :host host :port (Integer/parseInt port) :db db})))
 
 (defn -main []
   (let [port (Integer/parseInt (get (System/getenv) "PORT" "8080"))
-        db-url (System/getenv "MONGOHQ_URL")
-        db-info (or (and db-url (db-info db-url))
-                    {:db "mydb", :host "127.0.0.1", :port 27017})]
-    (with-db db-info
-      #(run-jetty clj-wiki-app {:port port}))))
+        db-url (System/getenv "MONGOHQ_URL")]
+    (reset! *db-info* (db-info db-url))
+    (run-jetty clj-wiki-app {:port port})))
