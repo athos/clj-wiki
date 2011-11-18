@@ -2,17 +2,22 @@
   (:use [clj-wiki.util :only [url-encode]]
         [hiccup.core :only [html escape-html]]
         [ring.util.response :only [redirect-after-post]]
-        [somnium.congomongo :only [insert! update! fetch-one]]))
+        [somnium.congomongo :only [insert! update! fetch-one fetch]]))
 
-(defn- page->html [title content & {:keys [show-edit? show-all?]}]
+(defn- page->html [title content & {:keys [show-edit? show-all?]
+                                    :or {show-edit? true, show-all? true}}]
   (html [:html
          [:head [:title (escape-html title)]
           [:body
            [:h1 (escape-html title)]
            [:div {:align "right"}
-            [:a {:href "/"} "[Top]"]
-            [:a {:href (str "/" (url-encode title "/") "/edit")} "[Edit]"]
-            [:a {:href (str "/all")} "[All]"]]
+            `([:a {:href "/"} "[Top]"]
+              ~@(if show-edit?
+                  [[:a {:href (str "/" (url-encode title "/") "/edit")} "[Edit]"]]
+                  [])
+              ~@(if show-all?
+                  [[:a {:href (str "/all")} "[All]"]]
+                  []))]
            [:hr]
            content]]]))
 
@@ -26,7 +31,18 @@
     [:textarea {:name "content" :rows 25 :cols 60} (escape-html content)]
     [:input {:type "hidden" :name "wikiname" :value (url-encode pagename)}]
     [:input {:type "submit" :name "submit" :value "Submit"}]
-    [:input {:type "reset" :name "reset" :value "Reset"}]]))
+    [:input {:type "reset" :name "reset" :value "Reset"}]]
+   :show-edit? false))
+
+(defn- render-list-page []
+  (page->html
+   "List"
+   [:ul
+    (for [page (fetch :pages :only [:name] :sort {:name 1})]
+      [:li [:a {:href (url-encode (:name page) "/")}
+            (escape-html (:name page))]])]
+   :show-edit? false
+   :show-all? false))
 
 (defn- standard-page [content]
   {:status 200
@@ -44,7 +60,7 @@
     (not-found-page)))
 
 (defn list-page []
-  (standard-page "page list goes here"))
+  (standard-page (render-list-page)))
 
 (defn edit-page [wikiname]
   (let [page (fetch-one :pages :where {:name wikiname})]
