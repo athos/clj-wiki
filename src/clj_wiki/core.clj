@@ -2,6 +2,7 @@
   (:use [compojure.core :only [defroutes GET POST ANY]]
         [compojure.handler :only [site]]
         [clj-wiki.handlers :only [view-page list-page edit-page commit-page not-found-page]]
+        [clj-wiki.util :only [url-decode]]
         [ring.adapter.jetty :only [run-jetty]]
         [somnium.congomongo :only [make-connection set-connection! authenticate connection?]]
         [somnium.congomongo.config :only [*mongo-config*]]))
@@ -12,7 +13,7 @@
   (GET "/all" req
        (list-page))
   (POST "/submit" {params :params}
-        (commit-page (:wikiname params) (:content params)))
+        (commit-page (url-decode (:wikiname params)) (:content params)))
   (GET "/:wikiname" [wikiname]
        (view-page wikiname))
   (GET "/:wikiname/edit" [wikiname]
