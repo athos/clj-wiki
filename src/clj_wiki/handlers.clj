@@ -1,25 +1,29 @@
 (ns clj-wiki.handlers
   (:use [clj-wiki.util :only [url-encode]]
+        [hiccup.page-helpers :only [html4]]
         [hiccup.core :only [html escape-html]]
         [ring.util.response :only [redirect-after-post]]
         [somnium.congomongo :only [insert! update! fetch-one fetch]]))
 
 (defn- page->html [title content & {:keys [show-edit? show-all?]
                                     :or {show-edit? true, show-all? true}}]
-  (html [:html
-         [:head [:title (escape-html title)]
-          [:body
-           [:h1 (escape-html title)]
-           [:div {:align "right"}
-            `([:a {:href "/"} "[Top]"]
-              ~@(if show-edit?
-                  [[:a {:href (str "/" (url-encode title "/") "/edit")} "[Edit]"]]
-                  [])
-              ~@(if show-all?
-                  [[:a {:href (str "/all")} "[All]"]]
-                  []))]
-           [:hr]
-           content]]]))
+  (html4
+   [:head
+    [:meta {:http-equiv "Content-Type" :content "text/html; charset=utf-8"}]
+    [:title (escape-html title)]
+    ]
+   [:body
+    [:h1 (escape-html title)]
+    [:div {:align "right"}
+     `([:a {:href "/"} "[Top]"]
+        ~@(if show-edit?
+            [[:a {:href (str "/" (url-encode title "/") "/edit")} "[Edit]"]]
+            [])
+        ~@(if show-all?
+            [[:a {:href (str "/all")} "[All]"]]
+            []))]
+    [:hr]
+    content]))
 
 (defn- render-view-page [pagename content]
   (page->html pagename (escape-html content)))
