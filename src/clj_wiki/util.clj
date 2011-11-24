@@ -3,8 +3,8 @@
 
 (defn url-encode [^String url & [more]]
   (reduce #(.replace ^String %1 (str %2) (format "%%%2X" (int %2)))
-          (URLEncoder/encode url)
+          (URLEncoder/encode url "UTF-8")
           more))
 
 (defn url-decode [^String url]
-  (URLDecoder/decode url))
+  (URLDecoder/decode url "UTF-8"))

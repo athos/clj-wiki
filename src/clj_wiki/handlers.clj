@@ -1,5 +1,6 @@
 (ns clj-wiki.handlers
   (:use [clj-wiki.util :only [url-encode]]
+        [clj-wiki.format :only [format-content]]
         [hiccup.page-helpers :only [html4]]
         [hiccup.core :only [html escape-html]]
         [ring.util.response :only [redirect-after-post]]
@@ -26,13 +27,13 @@
     content]))
 
 (defn- render-view-page [pagename content]
-  (page->html pagename (escape-html content)))
+  (page->html pagename content))
 
 (defn- render-edit-page [pagename content]
   (page->html
    pagename
    [:form {:method "POST" :action "/submit"}
-    [:textarea {:name "content" :rows 25 :cols 60} (escape-html content)]
+    [:textarea {:name "content" :rows 25 :cols 60} content]
     [:input {:type "hidden" :name "wikiname" :value (url-encode pagename)}]
     [:input {:type "submit" :name "submit" :value "Submit"}]
     [:input {:type "reset" :name "reset" :value "Reset"}]]
@@ -71,7 +72,9 @@
     (standard-page (render-edit-page wikiname (:content page)))))
 
 (defn commit-page [wikiname content]
-  (if-let [page (fetch-one :pages :where {:name wikiname})]
-    (update! :pages page (merge page {:content content}))
-    (insert! :pages {:name wikiname :content content}))
+  (println content)
+  (let [formatted (format-content content)]
+    (if-let [page (fetch-one :pages :where {:name wikiname})]
+      (update! :pages page (merge page {:content formatted}))
+      (insert! :pages {:name wikiname :content formatted})))
   (redirect-after-post (str "/" (url-encode wikiname "/"))))
