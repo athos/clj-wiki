@@ -23,6 +23,12 @@
 
 (def *db-info* (atom nil))
 
+(defn wrap-reload [handler reloadables]
+  (fn [req]
+    (doseq [reloadable reloadables]
+      (require reloadable :reload))
+    (handler req)))
+
 (defn wrap-mongo-setup [handler default]
   (fn [req]
     (when-not (connection? *mongo-config*)
@@ -35,7 +41,9 @@
 
 (def clj-wiki-app
   (-> (site routes)
-      (wrap-mongo-setup {:db "mydb" :host "127.0.0.1" :port 27017})))
+      (wrap-mongo-setup {:db "mydb" :host "127.0.0.1" :port 27017})
+      (wrap-reload 'clj-wiki.handlers)
+      ))
 
 (defn db-info [url]
   (and url
