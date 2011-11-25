@@ -51,7 +51,7 @@
 
 (defn- standard-page [content]
   {:status 200
-   :headers {"Content-Type" "text/html"}
+   :headers {"Content-Type" "text/html; charset=utf-8"}
    :body content})
 
 (defn not-found-page []
