@@ -73,7 +73,6 @@
     (standard-page (render-edit-page wikiname (:content page)))))
 
 (defn commit-page [wikiname content]
-  (println content)
   (let [formatted (format-content content)]
     (if-let [page (fetch-one :pages :where {:name wikiname})]
       (update! :pages page (merge page {:content formatted}))

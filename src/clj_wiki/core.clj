@@ -44,7 +44,7 @@
   (-> (site routes)
       (wrap-mongo-setup {:db "mydb" :host "127.0.0.1" :port 27017})
       (wrap-multipart-params)
-      (wrap-reload 'clj-wiki.handlers)
+      (wrap-reload '[clj-wiki.handlers])
       ))
 
 (defn db-info [url]
