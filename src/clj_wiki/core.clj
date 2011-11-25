@@ -30,15 +30,19 @@
       (require reloadable :reload))
     (handler req)))
 
+(defn with-db [db proc]
+  (let [{:keys [user pass host port db]} db
+        conn (make-connection db :host host :port port)]
+    (when-not (connection? *mongo-config*)
+      (set-connection! conn)
+      (when (and user pass)
+        (authenticate conn user pass)))
+    (proc)))
+
 (defn wrap-mongo-setup [handler default]
   (fn [req]
-    (when-not (connection? *mongo-config*)
-      (let [{:keys [user pass host port db]} (or @*db-info* default)
-            conn (make-connection db :host host :port port)]
-        (set-connection! conn)
-        (when (and user pass)
-          (authenticate conn user pass))))
-    (handler req)))
+    (with-db (or @*db-info* default)
+      #(handler req))))
 
 (def clj-wiki-app
   (-> (site routes)
