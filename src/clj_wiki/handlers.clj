@@ -32,9 +32,10 @@
 (defn- render-edit-page [pagename content]
   (page->html
    pagename
-   [:form {:method "POST" :action "/submit"}
+   [:form {:method "POST"
+           :action (str "/" (url-encode pagename "/") "/submit")
+           :enctype "multipart/form-data"}
     [:textarea {:name "content" :rows 25 :cols 60} content]
-    [:input {:type "hidden" :name "wikiname" :value (url-encode pagename)}]
     [:input {:type "submit" :name "submit" :value "Submit"}]
     [:input {:type "reset" :name "reset" :value "Reset"}]]
    :show-edit? false))
